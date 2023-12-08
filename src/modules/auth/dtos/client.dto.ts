@@ -1,13 +1,8 @@
-import { Exclude, Expose } from 'class-transformer'
+import { Exclude } from 'class-transformer'
 
 export class ClientDto {
-  @Expose()
   id: number
-
-  @Expose()
   name: string
-
-  @Expose()
   email: string
 
   @Exclude()

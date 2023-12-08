@@ -3,29 +3,13 @@ import { MiddlewareConsumer, RequestMethod } from '@nestjs/common'
 import { LoggerMiddleware } from './commons/middlewares/logger.middleware'
 import { TraceMiddleware } from './commons/middlewares/trace.middleware'
 import cookieSession = require('cookie-session')
-import { APP_PIPE } from '@nestjs/core'
+import { APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
-import { APP_INTERCEPTOR } from '@nestjs/core'
 import { ResponseInterceptor } from './commons/interceptors/response.interceptor'
 import { AuthModule } from './modules/auth/auth.module'
-import { Transport, ClientsModule } from '@nestjs/microservices'
+import { RpcExceptionsFilter } from './commons/filters/exception.filter'
 @Module({
-  imports: [
-    AuthModule,
-    ClientsModule.register([
-      {
-        name: 'DATA_HANDLER_SERVICE',
-        transport: Transport.RMQ,
-        options: {
-          urls: ['amqp://localhost:5672'],
-          queue: 'main_queue',
-          queueOptions: {
-            durable: false,
-          },
-        },
-      },
-    ]),
-  ],
+  imports: [AuthModule],
   providers: [
     {
       provide: APP_PIPE,
@@ -37,6 +21,10 @@ import { Transport, ClientsModule } from '@nestjs/microservices'
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: RpcExceptionsFilter,
     },
   ],
 })

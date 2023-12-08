@@ -1,64 +1,71 @@
 import {
   Injectable,
-  InternalServerErrorException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common'
-//import { ClientProxy } from '@nestjs/microservices'
 import * as bcrypt from 'bcrypt'
-import { HttpService } from '@nestjs/axios'
 import { firstValueFrom } from 'rxjs'
-import * as dotenv from 'dotenv'
+import { Inject } from '@nestjs/common'
+import { ClientProxy } from '@nestjs/microservices'
 
-dotenv.config()
 @Injectable()
 export class AuthService {
   constructor(
-    private httpService: HttpService, // Inject HttpService here
-    //@Inject('DATA_HANDLER_SERVICE') private dataHandlerClient: ClientProxy,
+    @Inject('DATA_HANDLER_SERVICE') private dataHandlerClient: ClientProxy,
   ) {}
 
   async signup(name: string, email: string, password: string): Promise<any> {
     const saltOrRounds = 10
     const hash = await bcrypt.hash(password, saltOrRounds)
-    const emailExist = await firstValueFrom(
-      this.httpService.get(
-        `${process.env.DB_HANDLER_ENDPOINT}/clients/email/${email}`,
-      ),
+
+    const emailCheckResponse = await firstValueFrom(
+      this.dataHandlerClient.send({ cmd: 'find-client-by-email' }, { email }),
     )
-    if (emailExist.data.data) {
+
+    if (emailCheckResponse.data.status !== 'not found') {
       throw new ConflictException('Email already exists in database')
     }
 
     try {
       const createResponse = await firstValueFrom(
-        this.httpService.post(
-          `${process.env.DB_HANDLER_ENDPOINT}/clients/create`,
+        this.dataHandlerClient.send(
+          { cmd: 'create-client' },
           { name, email, password: hash },
         ),
       )
-      return createResponse.data.data
+      return createResponse
     } catch (createError) {
-      console.error(
-        'Error creating client:',
-        createError.response?.data || createError.message,
-      )
+      console.error('Error creating client:', createError.message)
       throw new InternalServerErrorException('Failed to create client')
     }
   }
 
   async signin(email: string, password: string): Promise<any> {
     const client = await firstValueFrom(
-      this.httpService.get(
-        `${process.env.DB_HANDLER_ENDPOINT}/clients/email/${email}`,
-      ),
+      this.dataHandlerClient.send({ cmd: 'find-client-by-email' }, { email }),
     )
-    if (!client.data.data) {
+
+    if (!client) {
       throw new ConflictException('Email does not exist in database')
     }
-    const match = await bcrypt.compare(password, client.data.data.password)
+    const clientPassword = client.data.data.password
+
+    const match = await bcrypt.compare(password, clientPassword)
     if (!match) {
+      console.error('Password does not match. Input password:', password)
+      console.error('Hashed password from the database:', client.password)
       throw new ConflictException('Password does not match')
     }
-    return client.data.data
+    return client
+  }
+
+  test() {
+    return this.dataHandlerClient.send(
+      { cmd: 'test' },
+      {
+        status: true,
+        message: `MENSAJE DESDE LA API GATEWAY ${new Date().getSeconds()}`,
+      },
+    )
   }
 }
