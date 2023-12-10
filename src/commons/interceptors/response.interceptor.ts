@@ -8,7 +8,7 @@ import { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor {
+export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     if (context.getType() === 'http') {
       const ctx = context.switchToHttp()
@@ -18,19 +18,18 @@ export class ResponseInterceptor<T> implements NestInterceptor {
 
       return next.handle().pipe(
         map((data) => {
+          // check if 'data' already contains 'access_token' and other required fields
+          console.log('Data received in response interceptor:', data)
+          const hasRequiredFields =
+            data?.access_token || data?.client || data?.email
+
           return {
             trace: traceValue,
             code: response.statusCode,
             message: 'successful',
-            data:
-              data && typeof data === 'object' && Object.keys(data).length > 0
-                ? data.data
-                : undefined,
-            pagination: data?.meta
-              ? data.meta
-              : data?.pagination
-                ? data.pagination
-                : undefined,
+            // if 'data' already contains 'access_token' and other required fields, return 'data' as is
+            data: hasRequiredFields ? data : data?.data,
+            pagination: data?.meta || data?.pagination,
           }
         }),
       )

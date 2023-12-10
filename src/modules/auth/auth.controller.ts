@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Get, Session, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service'
-import { AuthGuard } from '../../commons/guards/auth.guard'
+import { JwtAuthGuard } from '../../commons/guards/auth.guard'
 import { CurrentClient } from '../../commons/decorators/current-client.decorator'
 import { LoginDto } from './dtos/login.dto'
 import { ClientDto } from './dtos/client.dto'
@@ -16,40 +16,43 @@ export class AuthController {
     return this.authService.test()
   }
 
+  @Serialize(ClientDto)
   @Post('/signup')
   async signup(
     @Body() body: SignupDto,
-    @Session() session: any,
-  ): Promise<ClientDto> {
-    const client = await this.authService.signup(
+  ): Promise<{ client: ClientDto; access_token: string }> {
+    const result = await this.authService.signup(
       body.name,
       body.email,
       body.password,
     )
-    session.clientId = client.id
-    return client
+    return {
+      client: result.data,
+      access_token: result.access_token,
+    }
   }
 
   @Serialize(ClientDto)
   @Post('/signin')
   async signin(
     @Body() body: LoginDto,
-    @Session() session: any,
-  ): Promise<ClientDto> {
-    const client = await this.authService.signin(body.email, body.password)
-    session.clientId = client.data.data.id
-    return client
+  ): Promise<{ client: ClientDto; access_token: string }> {
+    const result = await this.authService.signin(body.email, body.password)
+    return {
+      client: result.data,
+      access_token: result.access_token,
+    }
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('/whoami')
-  whoAmI(@CurrentClient() client: string): string {
-    const data = 'Client ID:' + client
-    return data
+  whoAmI(@CurrentClient() client: any): any {
+    return client
   }
 
   @Post('/signout')
   signout(@Session() session: any): void {
     session.clientId = null
+    // Aquí podrías querer invalidar el token JWT si estás manteniendo una lista negra de tokens
   }
 }

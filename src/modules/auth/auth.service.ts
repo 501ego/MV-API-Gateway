@@ -7,11 +7,13 @@ import * as bcrypt from 'bcrypt'
 import { firstValueFrom } from 'rxjs'
 import { Inject } from '@nestjs/common'
 import { ClientProxy } from '@nestjs/microservices'
+import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject('DATA_HANDLER_SERVICE') private dataHandlerClient: ClientProxy,
+    private jwtService: JwtService,
   ) {}
 
   async signup(name: string, email: string, password: string): Promise<any> {
@@ -33,7 +35,10 @@ export class AuthService {
           { name, email, password: hash },
         ),
       )
-      return createResponse
+      const payload = { email, sub: createResponse.id }
+      const access_token = this.jwtService.sign(payload)
+
+      return { ...createResponse, access_token }
     } catch (createError) {
       console.error('Error creating client:', createError.message)
       throw new InternalServerErrorException('Failed to create client')
@@ -45,7 +50,7 @@ export class AuthService {
       this.dataHandlerClient.send({ cmd: 'find-client-by-email' }, { email }),
     )
 
-    if (!client) {
+    if (client.data.data === null || !client) {
       throw new ConflictException('Email does not exist in database')
     }
     const clientPassword = client.data.data.password
@@ -56,7 +61,10 @@ export class AuthService {
       console.error('Hashed password from the database:', client.password)
       throw new ConflictException('Password does not match')
     }
-    return client
+    const payload = { email, sub: client.id }
+    const access_token = this.jwtService.sign(payload)
+
+    return { ...client, access_token }
   }
 
   test() {
