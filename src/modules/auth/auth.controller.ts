@@ -6,6 +6,7 @@ import { LoginDto } from './dtos/login.dto'
 import { ClientDto } from './dtos/client.dto'
 import { Serialize } from 'src/commons/interceptors/serialize.interceptor'
 import { SignupDto } from './dtos/signup.dto'
+import { HttpCode, HttpStatus } from '@nestjs/common'
 
 @Controller('auth')
 export class AuthController {
@@ -32,12 +33,14 @@ export class AuthController {
     }
   }
 
+  @HttpCode(HttpStatus.OK)
   @Serialize(ClientDto)
   @Post('/signin')
   async signin(
     @Body() body: LoginDto,
   ): Promise<{ client: ClientDto; access_token: string }> {
     const result = await this.authService.signin(body.email, body.password)
+
     return {
       client: result.data,
       access_token: result.access_token,
@@ -51,8 +54,5 @@ export class AuthController {
   }
 
   @Post('/signout')
-  signout(@Session() session: any): void {
-    session.clientId = null
-    // Aquí podrías querer invalidar el token JWT si estás manteniendo una lista negra de tokens
-  }
+  signout(@Session() session: any): void {}
 }

@@ -10,18 +10,24 @@ import { ClientProxy } from '@nestjs/microservices'
 import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
-export class AuthService {
+export class AdminAuthService {
   constructor(
-    @Inject('DATA_HANDLER_SERVICE') private dataHandlerClient: ClientProxy,
+    @Inject('DATA_HANDLER_SERVICE') private dataHandler: ClientProxy,
     private jwtService: JwtService,
   ) {}
 
-  async signup(name: string, email: string, password: string): Promise<any> {
+  async create(
+    rut: string,
+    name: string,
+    email: string,
+    password: string,
+    isAdmin: boolean,
+  ): Promise<any> {
     const saltOrRounds = 10
     const hash = await bcrypt.hash(password, saltOrRounds)
 
     const emailCheckResponse = await firstValueFrom(
-      this.dataHandlerClient.send({ cmd: 'find-client-by-email' }, { email }),
+      this.dataHandler.send({ cmd: 'find-employee-by-email' }, { email }),
     )
 
     if (emailCheckResponse.data.status !== 'not found') {
@@ -30,9 +36,9 @@ export class AuthService {
 
     try {
       const createResponse = await firstValueFrom(
-        this.dataHandlerClient.send(
-          { cmd: 'create-client' },
-          { name, email, password: hash },
+        this.dataHandler.send(
+          { cmd: 'create-employee' },
+          { rut, name, email, password: hash, isAdmin },
         ),
       )
       const payload = { email, sub: createResponse.id }
@@ -40,40 +46,31 @@ export class AuthService {
 
       return { ...createResponse, access_token }
     } catch (createError) {
-      console.error('Error creating client:', createError.message)
-      throw new InternalServerErrorException('Failed to create client')
+      console.error('Error creating employee:', createError.message)
+      throw new InternalServerErrorException('Failed to create employee')
     }
   }
 
   async signin(email: string, password: string): Promise<any> {
-    const client = await firstValueFrom(
-      this.dataHandlerClient.send({ cmd: 'find-client-by-email' }, { email }),
+    const employee = await firstValueFrom(
+      this.dataHandler.send({ cmd: 'find-employee-by-email' }, { email }),
     )
 
-    if (client.data.data === null || !client) {
+    if (employee.data.data === null || !employee) {
       throw new ConflictException('Email does not exist in database')
     }
-    const clientPassword = client.data.data.password
+    const employeePassword = employee.data.data.password
+    const isAdmin = employee.data.data.isAdmin
 
-    const match = await bcrypt.compare(password, clientPassword)
+    const match = await bcrypt.compare(password, employeePassword)
     if (!match) {
       console.error('Password does not match. Input password:', password)
-      console.error('Hashed password from the database:', client.password)
+      console.error('Hashed password from the database:', employee.password)
       throw new ConflictException('Password does not match')
     }
-    const payload = { email, sub: client.data.data.id }
+    const payload = { email, sub: employee.data.data.id, isAdmin }
     const access_token = this.jwtService.sign(payload)
 
-    return { ...client, access_token }
-  }
-
-  test() {
-    return this.dataHandlerClient.send(
-      { cmd: 'test' },
-      {
-        status: true,
-        message: `MENSAJE DESDE LA API GATEWAY ${new Date().getSeconds()}`,
-      },
-    )
+    return { ...employee, access_token }
   }
 }

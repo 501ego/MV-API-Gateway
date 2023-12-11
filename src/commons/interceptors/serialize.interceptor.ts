@@ -22,13 +22,25 @@ export class SerializeInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, handler: CallHandler): Observable<any> {
     return handler.handle().pipe(
       map((data: any) => {
-        const serializedClient = plainToInstance(this.dto, data.client.data, {
+        let objectToSerialize
+        if (data.client) {
+          objectToSerialize = data.client.data
+        } else if (data.employee) {
+          objectToSerialize = data.employee.data
+        } else {
+          throw new Error('Invalid data structure')
+        }
+
+        const serializedObject = plainToInstance(this.dto, objectToSerialize, {
           excludeExtraneousValues: true,
         })
-        return {
-          ...serializedClient,
-          access_token: data.access_token,
-        }
+
+        return data.access_token
+          ? {
+              ...serializedObject,
+              access_token: data.access_token,
+            }
+          : serializedObject
       }),
     )
   }

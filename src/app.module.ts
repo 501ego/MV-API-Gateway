@@ -8,8 +8,10 @@ import { ResponseInterceptor } from './commons/interceptors/response.interceptor
 import { AuthModule } from './modules/auth/auth.module'
 import { RpcExceptionsFilter } from './commons/filters/exception.filter'
 import { RabbitMQModule } from './modules/publisher/rabbit.module'
+import { AdminAuthModule } from './modules/adminauth/adminAuth.module'
+import { LoansModule } from './modules/loan/loan.module'
 @Module({
-  imports: [AuthModule, RabbitMQModule],
+  imports: [AuthModule, AdminAuthModule, RabbitMQModule, LoansModule],
   providers: [
     {
       provide: APP_PIPE,

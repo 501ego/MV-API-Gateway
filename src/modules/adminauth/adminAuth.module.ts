@@ -1,18 +1,16 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { AuthController } from './auth.controller'
-import { AuthService } from './auth.service'
 import { ClientsModule, Transport } from '@nestjs/microservices'
 import { StrategiesModule } from 'src/commons/strategies/strategies.module'
 import { JwtModule } from '@nestjs/jwt'
+import { AdminAuthService } from './adminAuth.service'
+import { AdminAuthController } from './adminAuth.controller'
 
 @Module({
   imports: [
-    ConfigModule,
-    StrategiesModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '2m' },
+      signOptions: { expiresIn: '5h' },
     }),
     ClientsModule.register([
       {
@@ -27,8 +25,10 @@ import { JwtModule } from '@nestjs/jwt'
         },
       },
     ]),
+    ConfigModule,
+    StrategiesModule,
   ],
-  controllers: [AuthController],
-  providers: [AuthService],
+  controllers: [AdminAuthController],
+  providers: [AdminAuthService],
 })
-export class AuthModule {}
+export class AdminAuthModule {}

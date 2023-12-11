@@ -18,8 +18,7 @@ export class ResponseInterceptor implements NestInterceptor {
 
       return next.handle().pipe(
         map((data) => {
-          // check if 'data' already contains 'access_token' and other required fields
-          console.log('Data received in response interceptor:', data)
+          // console.log('Data received in response interceptor:', data)
           const hasRequiredFields =
             data?.access_token || data?.client || data?.email
 
