@@ -10,7 +10,7 @@ import { LoanService } from './loan.service'
   imports: [
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '5h' },
+      signOptions: { expiresIn: '3h' },
     }),
     ClientsModule.register([
       {

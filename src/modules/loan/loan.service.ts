@@ -15,4 +15,25 @@ export class LoanService {
     )
     return loan.data
   }
+
+  async findByClient(clientId: number): Promise<LoanDto[]> {
+    const loans = await firstValueFrom(
+      this.dataHandlerClient.send({ cmd: 'get-loans-by-client' }, { clientId }),
+    )
+    return loans.data
+  }
+
+  async findOne(id: number): Promise<LoanDto> {
+    const loan = await firstValueFrom(
+      this.dataHandlerClient.send({ cmd: 'get-loan-by-id' }, { id }),
+    )
+    return loan.data
+  }
+
+  async payLoan(id: number, attrs: any): Promise<LoanDto> {
+    const loan = await firstValueFrom(
+      this.dataHandlerClient.send({ cmd: 'pay-loan' }, { id, attrs }),
+    )
+    return loan.data
+  }
 }
